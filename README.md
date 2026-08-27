@@ -494,8 +494,8 @@ are large or contain sensitive information.
 Clone the repository:
 
 ```bash
-git clone [https://github.com/raulrobinson/support-logging](https://github.com/raulbolivarnavas/java-webflux-support-logging).git
-cd support-logging
+git clone https://github.com/raulbolivarnavas/java-webflux-support-logging.git
+cd java-webflux-support-logging
 ```
 
 Build:
