@@ -40,8 +40,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
     // AOP - si @SupportLogging usa Aspect
-    implementation 'org.springframework:spring-aop'
-    implementation 'org.aspectj:aspectjweaver'
+    api 'org.springframework.boot:spring-boot-starter-aop'
+    api 'io.projectreactor:reactor-core'
+    api 'org.slf4j:slf4j-api'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.42'

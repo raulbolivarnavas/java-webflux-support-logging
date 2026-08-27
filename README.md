@@ -190,49 +190,49 @@ large multiline logs.
 Example:
 
 ```text
-══════════════════════════════════════════════════════════════════════════════
-[SUPPORT] EXTERNAL CALL
-──────────────────────────────────────────────────────────────────────────────
-Operation    : retrieve-customer
-Method       : GET
-URL          : https://api.example.com/customers/123
-
-──────────────────────────────────────────────────────────────────────────────
-QUERY PARAMS
-──────────────────────────────────────────────────────────────────────────────
--
-
-──────────────────────────────────────────────────────────────────────────────
-HEADERS
-──────────────────────────────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────────────
+ ## [SUPPORT HTTP CALL] ##
+──────────────────────────────────────────────────────────────────────────────────
+- [OPERATION] : update-customer
+- [METHOD]    : PUT
+- [URL]       : https://jsonplaceholder.typicode.com/users/1
+────────────────────── REQUEST ───────────────────────────────────────────────────
+- [QUERY-PARAMS]
 {
-  "Authorization" : "Bearer ***",
-  "Accept" : "application/json"
+  "id" : "1",
+  "cardNumber" : "******6795"
 }
 
-──────────────────────────────────────────────────────────────────────────────
-REQUEST
-──────────────────────────────────────────────────────────────────────────────
--
-
-──────────────────────────────────────────────────────────────────────────────
-RESPONSE
-──────────────────────────────────────────────────────────────────────────────
+- [HEADERS]
 {
-  "customerId" : "123",
-  "name" : "John Doe",
-  "status" : "ACTIVE"
+  "Accept" : "application/json",
+  "Authorization" : "************"
 }
 
-──────────────────────────────────────────────────────────────────────────────
-CURL
-──────────────────────────────────────────────────────────────────────────────
-curl --location --request GET \
-'https://api.example.com/customers/123' \
---header 'Authorization: Bearer ***' \
---header 'Accept: application/json'
-
-══════════════════════════════════════════════════════════════════════════════
+- [BODY]
+{
+  "customer" : {
+    "name" : "Raul"
+  }
+}
+────────────────────── RESPONSE ─────────────────────────────────────────────────
+{
+  "customer" : {
+    "name" : "Raul"
+  },
+  "id" : 1
+}
+────────────────────── CURL ─────────────────────────────────────────────────────
+curl --location --request PUT 'https://jsonplaceholder.typicode.com/users/1?id=1&cardNumber=******6795' \
+--header 'Accept: application/json' \
+--header 'Authorization: ************' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "customer" : {
+    "name" : "Raul"
+  }
+}'
+─────────────────────────────────────────────────────────────────────────────────
 ```
 
 This format makes it easier to copy requests, inspect payloads and troubleshoot
@@ -295,20 +295,36 @@ Map<String, String> headers = Map.of(
 the logger can generate:
 
 ```bash
-curl --location --request GET \
-'https://api.example.com/customers/123' \
---header 'Authorization: Bearer ***' \
---header 'Accept: application/json'
+curl --location 'http://localhost:8080/demo/customers/1' \
+--header 'Authorization: Bearer a.b.c'
 ```
 
 For POST operations:
 
 ```bash
-curl --location --request POST \
-'https://api.example.com/customers' \
+curl --location 'http://localhost:8080/demo/customers' \
+--header 'Authorization: Bearer a.b.c' \
 --header 'Content-Type: application/json' \
---data-raw '{
-  "name": "John Doe"
+--data '{
+    "customer": {
+        "name": "Raul",
+        "customerId": "256895515411",
+        "accountNumber": "45032015223158411",
+        "password": "EsteEsElPassword"
+    }
+}'
+```
+
+For PUT operations:
+
+```bash
+curl --location --request PUT 'http://localhost:8080/demo/customers?id=1&cardNumber=1526346795' \
+--header 'Authorization: Bearer a.b.c' \
+--header 'Content-Type: application/json' \
+--data '{
+    "customer": {
+        "name": "Raul"
+    }
 }'
 ```
 
@@ -397,29 +413,92 @@ External Adapter
 A complete WebFlux example:
 
 ```java
-@Slf4j
 @Component
 @RequiredArgsConstructor
-public class AccountDetailsAdapter {
+public class CustomerClient {
 
-    private static final ParameterizedTypeReference<AccountResponse> RESPONSE_TYPE =
+    public static final String API_BASE = "https://jsonplaceholder.typicode.com/users/";
+
+    private static final ParameterizedTypeReference<Map<String, Object>> RESPONSE_TYPE =
             new ParameterizedTypeReference<>() {};
 
-    private final WebClientComponent web;
+    private final WebClient.Builder webClientBuilder;
     private final SupportLogCapture supportLogCapture;
 
-    @SupportLogging(operation = "retrieve-account-details")
-    public Mono<AccountResponse> retrieve(String accountNumber) {
-
-        String endpoint = "https://api.example.com/accounts/" + accountNumber;
+    @SupportLogging(operation = "retrieve-customer")
+    public Mono<Map<String, Object>> retrieveCustomer(String customerId,
+                                                      String authorizationHeader) {
+        String endpoint = API_BASE + customerId;
 
         Map<String, String> headers = new LinkedHashMap<>();
 
-        headers.put("Content-Type", "application/json");
         headers.put("Accept", "application/json");
+        headers.put("Authorization", authorizationHeader);
 
-        return supportLogCapture.request("GET", endpoint, Map.of(), headers, null)
-                .then(web.externalGet(endpoint, headers, RESPONSE_TYPE));
+        Map<String, String> queryParams = Map.of();
+
+        return supportLogCapture.request("GET", endpoint, queryParams, headers,null)
+                .then(webClientBuilder
+                        .build()
+                        .get()
+                        .uri(endpoint)
+                        .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                        .retrieve()
+                        .bodyToMono(RESPONSE_TYPE)
+                );
+    }
+
+    @SupportLogging(operation = "create-customer")
+    public Mono<Map<String, Object>> createCustomer(Map<String, Object> customer,
+                                                    String authorizationHeader) {
+        String endpoint = API_BASE;
+
+        Map<String, String> headers = new LinkedHashMap<>();
+
+        headers.put("Accept", "application/json");
+        headers.put("Authorization", authorizationHeader);
+
+        Map<String, String> queryParams = Map.of();
+
+        return supportLogCapture.request("POST", endpoint, queryParams, headers, customer)
+                .then(webClientBuilder
+                        .build()
+                        .post()
+                        .uri(endpoint)
+                        .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                        .bodyValue(customer)
+                        .retrieve()
+                        .bodyToMono(RESPONSE_TYPE)
+                );
+    }
+
+    @SupportLogging(operation = "update-customer")
+    public Mono<Map<String, Object>> updateCustomer(String id,
+                                                    String cardNumber,
+                                                    Map<String, Object> customer,
+                                                    String authorizationHeader) {
+        String endpoint = API_BASE + id;
+
+        Map<String, String> headers = new LinkedHashMap<>();
+
+        headers.put("Accept", "application/json");
+        headers.put("Authorization", authorizationHeader);
+
+        Map<String, String> queryParams = Map.of(
+                "id", id,
+                "cardNumber", cardNumber
+        );
+
+        return supportLogCapture.request("PUT", endpoint, queryParams, headers, customer)
+                .then(webClientBuilder
+                        .build()
+                        .put()
+                        .uri(endpoint)
+                        .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                        .bodyValue(customer)
+                        .retrieve()
+                        .bodyToMono(RESPONSE_TYPE)
+                );
     }
 }
 ```
@@ -433,7 +512,27 @@ Example configuration:
 ```yaml
 support:
   logging:
-    level: INFO
+    level: DEBUG
+    masking:
+      enabled: true
+      fields:
+        authorization:
+          type: FULL
+        password:
+          type: FULL
+        clientSecret:
+          type: FULL
+        cardNumber:
+          type: KEEP_RIGHT
+          visible: 4
+        accountNumber:
+          type: KEEP_RIGHT
+          visible: 4
+        customerId:
+          type: KEEP_LEFT
+          visible: 3
+        email:
+          type: KEEP_LEFT
 ```
 
 Supported levels:
@@ -482,10 +581,35 @@ support:
     level: DEBUG
 ```
 
-temporarily when detailed troubleshooting is required.
+# Masking Sensitive Data
 
-Avoid leaving verbose request/response logging enabled permanently when payloads
-are large or contain sensitive information.
+```yaml
+support:
+  logging:
+    level: DEBUG
+    masking:
+      enabled: true
+      fields:
+        authorization:
+          type: FULL
+        password:
+          type: FULL
+        clientSecret:
+          type: FULL
+        cardNumber:
+          type: KEEP_RIGHT
+          visible: 4
+        accountNumber:
+          type: KEEP_RIGHT
+          visible: 4
+        customerId:
+          type: KEEP_LEFT
+          visible: 3
+        email:
+          type: KEEP_LEFT
+```
+
+It's enable for both levels `INFO` and `DEBUG`, but it is recommended to enable it in production environments.
 
 ---
 

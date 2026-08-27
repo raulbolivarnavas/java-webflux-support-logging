@@ -1,6 +1,5 @@
 package io.github.raulbolivarnavas.supportlogging.model;
 
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -10,7 +9,6 @@ import java.util.Map;
  * This component provides methods to capture request details (method, URL, query parameters, headers, and body)
  * and response details. The captured information is stored in a SupportLogState object accessible from the reactive context.
  */
-@Component
 @SuppressWarnings("javadoc")
 public class SupportLogCapture {
 

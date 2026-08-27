@@ -3,6 +3,9 @@ package io.github.raulbolivarnavas.supportlogging.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.raulbolivarnavas.supportlogging.adapter.SupportLogger;
 import io.github.raulbolivarnavas.supportlogging.helper.BuildCurl;
+import io.github.raulbolivarnavas.supportlogging.masking.DataMasker;
+import io.github.raulbolivarnavas.supportlogging.model.SupportLogCapture;
+import io.github.raulbolivarnavas.supportlogging.model.SupportLoggingAspect;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -26,9 +29,7 @@ public class SupportLoggingAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public BuildCurl buildCurl(
-            ObjectMapper objectMapper
-    ) {
+    public BuildCurl buildCurl(ObjectMapper objectMapper) {
         return new BuildCurl(objectMapper);
     }
 
@@ -45,12 +46,51 @@ public class SupportLoggingAutoConfiguration {
     public SupportLogger supportLogger(
             SupportLoggingProperties properties,
             ObjectMapper objectMapper,
-            BuildCurl buildCurl
+            BuildCurl buildCurl,
+            DataMasker dataMasker
     ) {
         return new SupportLogger(
                 properties,
                 objectMapper,
-                buildCurl
+                buildCurl,
+                dataMasker
+        );
+    }
+
+    /**
+     * Create a SupportLogCapture bean for logging support capture data.
+     *
+     * @return a new SupportLogCapture instance
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SupportLogCapture supportLogCapture() {
+        return new SupportLogCapture();
+    }
+
+    /**
+     * Create a SupportLoggingAspect bean for logging support
+     *
+     * @param supportLogger a SupportLogger instance
+     * @return a new SupportLoggingAspect instance
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SupportLoggingAspect supportLoggingAspect(SupportLogger supportLogger) {
+        return new SupportLoggingAspect(
+                supportLogger
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public DataMasker dataMasker(
+            ObjectMapper objectMapper,
+            SupportLoggingProperties properties
+    ) {
+        return new DataMasker(
+                objectMapper,
+                properties
         );
     }
 }

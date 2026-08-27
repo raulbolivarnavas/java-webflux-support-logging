@@ -5,7 +5,6 @@ import io.github.raulbolivarnavas.supportlogging.adapter.SupportLogger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
@@ -15,7 +14,6 @@ import reactor.core.publisher.Mono;
  * The aspect integrates with the Mono reactive stream to capture request/response details.
  */
 @Aspect
-@Component
 public class SupportLoggingAspect {
 
     private final SupportLogger supportLogger;
@@ -41,9 +39,8 @@ public class SupportLoggingAspect {
      * @throws Throwable If the method execution throws an exception that is not handled by the reactive stream.
      */
     @Around("@annotation(supportLogging)")
-    public Object around(
-            ProceedingJoinPoint joinPoint,
-            SupportLogging supportLogging) throws Throwable {
+    public Object around(ProceedingJoinPoint joinPoint,
+                         SupportLogging supportLogging) throws Throwable {
 
         Object result = joinPoint.proceed();
 

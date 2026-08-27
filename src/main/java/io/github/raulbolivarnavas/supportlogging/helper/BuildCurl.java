@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
  * Helper component for building cURL command representations of HTTP requests.
  * This utility is useful for debugging and logging HTTP interactions in a human-readable format.
  */
-@Component
 @RequiredArgsConstructor
 @SuppressWarnings("javadoc")
 public class BuildCurl {
@@ -33,14 +31,11 @@ public class BuildCurl {
      * @param body the request body/payload
      */
     @Builder
-    public record CurlRequest(
-            String method,
-            String url,
-            Map<String, String> queryParams,
-            Map<String, String> headers,
-            Object body
-    ) {
-
+    public record CurlRequest(String method,
+                              String url,
+                              Map<String, String> queryParams,
+                              Map<String, String> headers,
+                              Object body) {
         /**
          * Custom builder for CurlRequest with convenience methods for setting query parameters and headers.
          */
@@ -249,10 +244,7 @@ public class BuildCurl {
             return objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(body);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(
-                    "Unable to serialize CURL body",
-                    e
-            );
+            throw new IllegalArgumentException("Unable to serialize CURL body", e);
         }
     }
 }
