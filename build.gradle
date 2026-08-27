@@ -1,0 +1,136 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+    id 'org.jreleaser' version '1.21.0'
+}
+
+group = 'io.github.raulbolivarnavas'
+version = '1.0.0'
+description = 'Structured support logging utilities for Java and Spring applications'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot 3.5.16 BOM
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.5.16')
+
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-context-support'
+
+    // Reactor
+    implementation 'io.projectreactor:reactor-core'
+
+    // SLF4J API
+    api 'org.slf4j:slf4j-api'
+
+    // Jackson
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // AOP - si @SupportLogging usa Aspect
+    implementation 'org.springframework:spring-aop'
+    implementation 'org.aspectj:aspectjweaver'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+
+    // Tests
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+
+    // Mockito
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+
+    // Logback only for tests
+    testImplementation 'ch.qos.logback:logback-classic'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addBooleanOption('Xdoclint:none', true)
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = 'support-logging'
+
+            pom {
+                name = 'Support Logging'
+                description = 'Structured support logging utilities for Java and Spring applications'
+                url = 'https://github.com/raulbolivarnavas/support-logging'
+                licenses {
+                    license {
+                        name = 'Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution = 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'raulbolivarnavas'
+                        name = 'Raul Bolivar'
+                        url = 'https://github.com/raulbolivarnavas'
+                    }
+                }
+
+                scm {
+                    connection = 'scm:git:git://github.com/raulbolivarnavas/support-logging.git'
+                    developerConnection = 'scm:git:ssh://github.com/raulbolivarnavas/support-logging.git'
+                    url = 'https://github.com/raulbolivarnavas/support-logging'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'staging'
+            url = layout.buildDirectory.dir(
+                    'staging-deploy'
+            )
+        }
+    }
+}
+
+def signingKey = findProperty('signingKey')
+def signingPassword = findProperty('signingPassword')
+
+signing {
+    if (signingKey) {
+        useInMemoryPgpKeys(
+                signingKey,
+                signingPassword
+        )
+        sign publishing.publications.mavenJava
+    }
+}

@@ -1,0 +1,32 @@
+project:
+  name: support-logging
+  version: 1.0.0
+  description: Structured support logging utilities for Java and Spring applications
+  website: https://github.com/raulbolivarnavas/support-logging
+  authors:
+    - Raul Bolivar
+  license: Apache-2.0
+  java:
+    groupId: io.github.raulbolivarnavas
+    artifactId: support-logging
+
+release:
+  github:
+    enabled: true
+    skipTag: false
+    skipRelease: false
+
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
+        stagingRepositories:
+          - build/staging-deploy
+        applyMavenCentralRules: true
+        verifyPom: true
+        checksums: true
+        sourceJar: true
+        javadocJar: true
+        sign: true

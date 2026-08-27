@@ -59,4 +59,12 @@ bin/
 Dockerfile
 build-cache
 
+.gradle/
 
+*.asc
+
+gradle.properties
+
+*.gpg
+*.pgp
+*.key
