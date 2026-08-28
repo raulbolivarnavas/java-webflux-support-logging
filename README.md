@@ -1,6 +1,6 @@
 # Support Logging
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.raulrobinson/support-logging.svg)](https://central.sonatype.com/artifact/io.github.raulrobinson/support-logging)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.raulbolivarnavas/support-logging.svg)](https://central.sonatype.com/artifact/io.github.raulbolivarnavas/support-logging)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3%20%7C%204-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -71,6 +71,16 @@ For Gradle Kotlin DSL:
 ```kotlin
 implementation("io.github.raulbolivarnavas:support-logging:1.0.0")
 ```
+
+The released artifact is available directly from Maven Central:
+
+```gradle
+repositories {
+    mavenCentral()
+}
+```
+
+No `mavenLocal()` repository is required for version `1.0.0`.
 
 ---
 
@@ -505,6 +515,193 @@ public class CustomerClient {
 
 ---
 
+
+# Practical Examples
+
+## GET — path variable
+
+```java
+@SupportLogging(operation = "retrieve-customer")
+public Mono<Map<String, Object>> retrieveCustomer(
+        String customerId,
+        String authorizationHeader
+) {
+    String endpoint =
+            "https://jsonplaceholder.typicode.com/users/" + customerId;
+
+    Map<String, String> headers = Map.of(
+            "Accept", "application/json",
+            "Authorization", authorizationHeader
+    );
+
+    return supportLogCapture
+            .request("GET", endpoint, Map.of(), headers, null)
+            .then(webClientBuilder.build()
+                    .get()
+                    .uri(endpoint)
+                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                    .retrieve()
+                    .bodyToMono(RESPONSE_TYPE));
+}
+```
+
+A path variable is already part of the URL, so the captured query-parameter map is empty.
+
+## POST — request body
+
+```java
+@SupportLogging(operation = "create-customer")
+public Mono<Map<String, Object>> createCustomer(
+        Map<String, Object> customer,
+        String authorizationHeader
+) {
+    String endpoint = "https://jsonplaceholder.typicode.com/users";
+
+    Map<String, String> headers = Map.of(
+            "Accept", "application/json",
+            "Authorization", authorizationHeader
+    );
+
+    return supportLogCapture
+            .request("POST", endpoint, Map.of(), headers, customer)
+            .then(webClientBuilder.build()
+                    .post()
+                    .uri(endpoint)
+                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                    .bodyValue(customer)
+                    .retrieve()
+                    .bodyToMono(RESPONSE_TYPE));
+}
+```
+
+Example payload:
+
+```json
+{
+  "customer": {
+    "name": "Raul",
+    "customerId": "6163774",
+    "accountNumber": "45032015223158411",
+    "password": "secret-value"
+  }
+}
+```
+
+## PUT — query parameters
+
+The query parameters must be sent in the real `WebClient` request and supplied to
+`SupportLogCapture` so the support log describes the actual outbound interaction.
+
+```java
+@SupportLogging(operation = "update-customer")
+public Mono<Map<String, Object>> updateCustomer(
+        String id,
+        String cardNumber,
+        Map<String, Object> customer,
+        String authorizationHeader
+) {
+    String baseUrl = "https://jsonplaceholder.typicode.com";
+    String path = "/users";
+    String endpoint = baseUrl + path;
+
+    Map<String, String> headers = Map.of(
+            "Accept", "application/json",
+            "Authorization", authorizationHeader
+    );
+
+    Map<String, String> queryParams = Map.of(
+            "id", id,
+            "cardNumber", cardNumber
+    );
+
+    return supportLogCapture
+            .request("PUT", endpoint, queryParams, headers, customer)
+            .then(webClientBuilder
+                    .baseUrl(baseUrl)
+                    .build()
+                    .put()
+                    .uri(uriBuilder -> uriBuilder
+                            .path(path)
+                            .queryParam("id", id)
+                            .queryParam("cardNumber", cardNumber)
+                            .build())
+                    .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                    .bodyValue(customer)
+                    .retrieve()
+                    .bodyToMono(RESPONSE_TYPE));
+}
+```
+
+## Controller + external client
+
+```java
+@RestController
+@RequestMapping("/demo")
+@RequiredArgsConstructor
+public class DemoController {
+
+    private final CustomerClient customerClient;
+
+    @GetMapping("/customers/{id}")
+    public Mono<Map<String, Object>> getCustomer(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return customerClient.retrieveCustomer(id, authorization);
+    }
+
+    @PostMapping("/customers")
+    public Mono<Map<String, Object>> createCustomer(
+            @RequestBody Map<String, Object> customer,
+            @RequestHeader("Authorization") String authorization
+    ) {
+        return customerClient.createCustomer(customer, authorization);
+    }
+}
+```
+
+This separation fits Hexagonal/Clean Architecture: the controller handles the inbound
+contract while the driven adapter/client captures the outbound HTTP interaction.
+
+## Masking examples
+
+```yaml
+support:
+  logging:
+    level: DEBUG
+    masking:
+      enabled: true
+      fields:
+        authorization:
+          type: FULL
+        password:
+          type: FULL
+        clientSecret:
+          type: FULL
+        cardNumber:
+          type: RIGHT
+          visible: 4
+        accountNumber:
+          type: RIGHT
+          visible: 4
+        customerId:
+          type: LEFT
+          visible: 3
+        email:
+          type: NONE
+```
+
+| Type | Behavior | Example |
+|------|----------|---------|
+| `FULL` | Masks the complete value | `secret` → `******` |
+| `LEFT` | Keeps characters on the left | `6163774`, visible `3` → `616****` |
+| `RIGHT` | Keeps characters on the right | `1526346795`, visible `4` → `******6795` |
+| `NONE` | Leaves the value unchanged | `user@example.com` → `user@example.com` |
+
+Field-name matching is case-insensitive and normalizes hyphens and underscores, so
+`clientSecret`, `client-secret`, and `client_secret` match the same configured field.
+
+
 # Configuration
 
 Example configuration:
@@ -523,16 +720,16 @@ support:
         clientSecret:
           type: FULL
         cardNumber:
-          type: KEEP_RIGHT
+          type: RIGHT
           visible: 4
         accountNumber:
-          type: KEEP_RIGHT
+          type: RIGHT
           visible: 4
         customerId:
-          type: KEEP_LEFT
+          type: LEFT
           visible: 3
         email:
-          type: KEEP_LEFT
+          type: LEFT
 ```
 
 Supported levels:
@@ -597,16 +794,16 @@ support:
         clientSecret:
           type: FULL
         cardNumber:
-          type: KEEP_RIGHT
+          type: RIGHT
           visible: 4
         accountNumber:
-          type: KEEP_RIGHT
+          type: RIGHT
           visible: 4
         customerId:
-          type: KEEP_LEFT
+          type: LEFT
           visible: 3
         email:
-          type: KEEP_LEFT
+          type: LEFT
 ```
 
 It's enable for both levels `INFO` and `DEBUG`, but it is recommended to enable it in production environments.
@@ -618,26 +815,26 @@ It's enable for both levels `INFO` and `DEBUG`, but it is recommended to enable 
 Clone the repository:
 
 ```bash
-git clone https://github.com/raulbolivarnavas/java-webflux-support-logging.git
-cd java-webflux-support-logging
+git clone https://github.com/raulbolivarnavas/support-logging.git
+cd support-logging
 ```
 
 Build:
 
 ```bash
-./mvnw clean verify
+./gradlew clean build
 ```
 
 On Windows:
 
 ```powershell
-.\mvnw.cmd clean verify
+.\gradlew clean build
 ```
 
 Install locally:
 
 ```bash
-./mvnw clean install
+./gradlew publishToMavenLocal
 ```
 
 The development version can then be consumed from the local Maven repository:
@@ -653,19 +850,19 @@ The development version can then be consumed from the local Maven repository:
 Run the tests with:
 
 ```bash
-./mvnw test
+./gradlew test
 ```
 
 Run verification:
 
 ```bash
-./mvnw clean verify
+./gradlew clean build
 ```
 
 Before publishing a release, it is recommended to run:
 
 ```bash
-./mvnw clean verify
+./gradlew clean build
 ```
 
 and ensure that all tests, source generation and Javadocs complete successfully.
@@ -708,7 +905,7 @@ Contributions are welcome.
 2. Create a feature branch.
 3. Implement the change.
 4. Add or update tests.
-5. Run `mvn clean verify`.
+5. Run `./gradlew clean build`.
 6. Open a Pull Request.
 
 Example:
