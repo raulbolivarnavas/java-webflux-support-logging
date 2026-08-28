@@ -7,8 +7,10 @@ import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import io.github.raulbolivarnavas.supportlogging.helper.BuildCurl;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.github.raulbolivarnavas.supportlogging.config.SupportLoggingProperties;
+import io.github.raulbolivarnavas.supportlogging.helper.BuildCurl;
+import io.github.raulbolivarnavas.supportlogging.masking.DataMasker;
 import io.github.raulbolivarnavas.supportlogging.model.SupportLogLevel;
 import io.github.raulbolivarnavas.supportlogging.model.SupportLogState;
 import org.junit.jupiter.api.*;
@@ -17,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,13 +38,16 @@ class SupportLoggerTest {
     @Mock
     private BuildCurl buildCurl;
 
+    @Mock
+    private DataMasker dataMasker;
+
     private SupportLogger supportLogger;
     private Logger logger;
     private ListAppender<ILoggingEvent> listAppender;
 
     @BeforeEach
     void setUp() {
-        supportLogger = new SupportLogger(properties, objectMapper, buildCurl);
+        supportLogger = new SupportLogger(properties, objectMapper, buildCurl, dataMasker);
 
         logger = (Logger) LoggerFactory.getLogger(SupportLogger.class);
         listAppender = new ListAppender<>();
@@ -49,6 +55,16 @@ class SupportLoggerTest {
 
         logger.addAppender(listAppender);
         logger.setLevel(Level.INFO);
+
+        // 1. DataMasker pasa los objetos sin modificar por defecto
+        lenient().when(dataMasker.mask(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // 2. Mock genérico para asStringMap(...) usado internamente en logDebug
+        lenient().when(objectMapper.getTypeFactory())
+                .thenReturn(TypeFactory.defaultInstance());
+        lenient().when(objectMapper.convertValue(any(), any(com.fasterxml.jackson.databind.JavaType.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @AfterEach
@@ -94,6 +110,7 @@ class SupportLoggerTest {
                                     "response={\"status\":\"OK\"}"
                     );
 
+            verify(dataMasker, times(4)).mask(any());
             verify(buildCurl, never()).build(any());
         }
 
@@ -123,6 +140,7 @@ class SupportLoggerTest {
                                     "queryParams=- headers=- request=- response=-"
                     );
 
+            verify(dataMasker, times(4)).mask(null);
             verifyNoInteractions(objectMapper);
             verifyNoInteractions(buildCurl);
         }
@@ -208,8 +226,14 @@ class SupportLoggerTest {
         void shouldLogPrettyInformationAndCurlWhenLevelIsDebug() throws Exception {
             SupportLogState state = mockState();
             ObjectWriter writer = mock(ObjectWriter.class);
+            TypeFactory typeFactory = mock(TypeFactory.class);
 
             when(properties.resolvedLevel()).thenReturn(SupportLogLevel.DEBUG);
+            when(objectMapper.getTypeFactory()).thenReturn(typeFactory);
+            when(typeFactory.constructMapType(LinkedHashMap.class, String.class, String.class))
+                    .thenReturn(mock());
+            when(objectMapper.convertValue(any(), any(com.fasterxml.jackson.databind.JavaType.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
 
             when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
             when(writer.writeValueAsString(state.getQueryParams()))
@@ -253,18 +277,26 @@ class SupportLoggerTest {
                     .contains("\"status\" : \"OK\"")
                     .contains("curl -X POST https://service.test/cards");
 
+            verify(dataMasker, times(4)).mask(any());
             verify(buildCurl).build(any(BuildCurl.CurlRequest.class));
             verify(objectMapper, times(4)).writerWithDefaultPrettyPrinter();
             verify(objectMapper, never()).writeValueAsString(any());
         }
 
         @Test
-        @DisplayName("Debe enviar al BuildCurl los datos correctos del estado")
+        @DisplayName("Debe enviar al BuildCurl los datos enmascarados")
         void shouldBuildCurlUsingStateValues() throws Exception {
             SupportLogState state = mockState();
             ObjectWriter writer = mock(ObjectWriter.class);
+            TypeFactory typeFactory = mock(TypeFactory.class);
 
             when(properties.resolvedLevel()).thenReturn(SupportLogLevel.DEBUG);
+            when(objectMapper.getTypeFactory()).thenReturn(typeFactory);
+            when(typeFactory.constructMapType(LinkedHashMap.class, String.class, String.class))
+                    .thenReturn(mock());
+            when(objectMapper.convertValue(any(), any(com.fasterxml.jackson.databind.JavaType.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
             when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
             when(writer.writeValueAsString(any())).thenReturn("{}");
 
@@ -287,6 +319,24 @@ class SupportLoggerTest {
             supportLogger.log(state);
 
             verify(buildCurl).build(any(BuildCurl.CurlRequest.class));
+        }
+
+        @Test
+        @DisplayName("Debe enmascarar antes de generar el log en nivel DEBUG")
+        void shouldMaskDataBeforeLoggingInDebug() {
+            SupportLogState state = mockState();
+            ObjectWriter writer = mock(ObjectWriter.class);
+
+            when(properties.resolvedLevel()).thenReturn(SupportLogLevel.DEBUG);
+            when(dataMasker.mask(state.getRequest())).thenReturn(Map.of("name", "***"));
+            when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
+
+            supportLogger.log(state);
+
+            verify(dataMasker).mask(state.getRequest());
+            verify(dataMasker).mask(state.getQueryParams());
+            verify(dataMasker).mask(state.getHeaders());
+            verify(dataMasker).mask(state.getResponse());
         }
 
         @Test

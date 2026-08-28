@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'signing'
-    id 'org.jreleaser' version '1.21.0'
+    id 'org.jreleaser' version '1.25.0'
 }
 
 group = 'io.github.raulbolivarnavas'
@@ -133,5 +133,53 @@ signing {
                 signingPassword
         )
         sign publishing.publications.mavenJava
+    }
+}
+
+jreleaser {
+
+    project {
+        authors = ['Raul Bolivar']
+        license = 'Apache-2.0'
+
+        links {
+            homepage = 'https://github.com/raulbolivarnavas/support-logging'
+        }
+    }
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    release {
+        github {
+            enabled = true
+            repoOwner = 'raulbolivarnavas'
+            name = 'support-logging'
+            branch = 'main'
+            overwrite = false
+            skipTag = false
+            skipRelease = false
+        }
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+
+                    stagingRepository(
+                            layout.buildDirectory
+                                    .dir('staging-deploy')
+                                    .get()
+                                    .asFile
+                                    .absolutePath
+                    )
+                }
+            }
+        }
     }
 }
