@@ -68,7 +68,15 @@ Add the dependency to your `pom.xml`:
 ```xml
 <dependency>
     <groupId>io.github.raulbolivarnavas</groupId>
-    <artifactId>support-logging</artifactId>
+    <artifactId>support-logging-spring-boot3</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+```xml
+<dependency>
+    <groupId>io.github.raulbolivarnavas</groupId>
+    <artifactId>support-logging-spring-boot4</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -79,13 +87,21 @@ is required.
 ### Gradle
 
 ```gradle
-implementation 'io.github.raulbolivarnavas:support-logging:1.0.0'
+implementation 'io.github.raulbolivarnavas:support-logging-spring-boot3:1.0.0'
+```
+
+```gradle
+implementation 'io.github.raulbolivarnavas:support-logging-spring-boot4:1.0.0'
 ```
 
 For Gradle Kotlin DSL:
 
 ```kotlin
-implementation("io.github.raulbolivarnavas:support-logging:1.0.0")
+implementation("io.github.raulbolivarnavas:support-logging-spring-boot3:1.0.0")
+```
+
+```kotlin
+implementation("io.github.raulbolivarnavas:support-logging-spring-boot4:1.0.0")
 ```
 
 The released artifact is available directly from Maven Central:
