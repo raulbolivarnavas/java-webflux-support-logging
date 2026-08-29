@@ -14,6 +14,22 @@ minimal impact on application code.
 
 ---
 
+Compatible architecture with Spring Boot 3.5.x + Jackson 2 and Spring Boot 4.1.x + Jackson 3.
+
+## Artifacts
+
+```groovy
+// Spring Boot 3
+implementation 'io.github.raulbolivarnavas:support-logging-spring-boot3:1.1.0'
+
+// Spring Boot 4
+implementation 'io.github.raulbolivarnavas:support-logging-spring-boot4:1.1.0'
+```
+
+The `support-logging-core` module does not depend on Spring Boot or Jackson.
+
+---
+
 ## Features
 
 - Structured logging for external HTTP calls
@@ -843,6 +859,20 @@ The development version can then be consumed from the local Maven repository:
 ~/.m2/repository
 ```
 
+Generate JaCoCo reports for all modules:
+
+```bash
+./gradlew jacocoReports
+```
+
+The HTML reports are generated at:
+
+```text
+support-logging-core/build/reports/jacoco/test/html/index.html
+support-logging-spring-boot3/build/reports/jacoco/test/html/index.html
+support-logging-spring-boot4/build/reports/jacoco/test/html/index.html
+```
+
 ---
 
 # Testing
@@ -959,4 +989,3 @@ How can I reproduce the call?
 
 `support-logging` provides those answers consistently while keeping logging
 concerns outside the application's business logic.
-

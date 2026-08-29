@@ -1,0 +1,22 @@
+dependencies {
+
+    api project(":support-logging-core")
+
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${springVersion4}")
+    testImplementation platform("org.springframework.boot:spring-boot-dependencies:${springVersion4}")
+    annotationProcessor platform("org.springframework.boot:spring-boot-dependencies:${springVersion4}")
+
+
+    implementation "org.springframework.boot:spring-boot"
+    implementation "org.springframework.boot:spring-boot-autoconfigure"
+    implementation "org.springframework.boot:spring-boot-starter-json"
+
+    api "org.springframework.boot:spring-boot-starter-aspectj"
+    api "io.projectreactor:reactor-core"
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "io.projectreactor:reactor-test"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}

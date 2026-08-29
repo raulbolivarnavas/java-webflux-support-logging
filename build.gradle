@@ -1,149 +1,117 @@
 plugins {
-    id 'java-library'
-    id 'maven-publish'
-    id 'signing'
+    id 'base'
+    id 'jacoco'
     id 'org.jreleaser' version '1.25.0'
 }
 
-group = 'io.github.raulbolivarnavas'
-version = '1.0.0'
-description = 'Structured support logging utilities for Java and Spring applications'
+allprojects {
+    group = 'io.github.raulbolivarnavas'
+    version = '1.1.0'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+    repositories {
+        mavenCentral()
+        mavenLocal()
     }
-    withSourcesJar()
-    withJavadocJar()
 }
 
-repositories {
-    mavenCentral()
-}
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'jacoco'
+    apply plugin: 'maven-publish'
 
-dependencies {
-    // Spring Boot 3.5.16 BOM
-    implementation platform('org.springframework.boot:spring-boot-dependencies:3.5.16')
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+        withSourcesJar()
+        withJavadocJar()
+    }
 
-    // Spring Boot
-    implementation 'org.springframework.boot:spring-boot'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'org.springframework:spring-context-support'
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
 
-    // Reactor
-    implementation 'io.projectreactor:reactor-core'
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+        options.addBooleanOption('Xdoclint:none', true)
+    }
 
-    // SLF4J API
-    api 'org.slf4j:slf4j-api'
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
 
-    // Jackson
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    tasks.withType(JacocoReport).configureEach {
+        reports {
+            html.required = true
+            xml.required = true
+            csv.required = false
+        }
+    }
 
-    // AOP - si @SupportLogging usa Aspect
-    api 'org.springframework.boot:spring-boot-starter-aop'
-    api 'io.projectreactor:reactor-core'
-    api 'org.slf4j:slf4j-api'
+    jacoco {
+        toolVersion = '0.8.13'
+    }
 
-    // Lombok
-    compileOnly 'org.projectlombok:lombok:1.18.42'
-    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
 
-    // Tests
-    testImplementation platform('org.junit:junit-bom:5.13.4')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+                pom {
+                    name = project.name
+                    description = "Support Logging module ${project.name}"
+                    url = 'https://github.com/raulbolivarnavas/java-webflux-support-logging'
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'io.projectreactor:reactor-test'
-
-    // Mockito
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
-    testImplementation 'org.mockito:mockito-inline:5.2.0'
-
-    // Logback only for tests
-    testImplementation 'ch.qos.logback:logback-classic'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-}
-
-tasks.withType(Javadoc).configureEach {
-    options.encoding = 'UTF-8'
-    options.addBooleanOption('Xdoclint:none', true)
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-            artifactId = 'support-logging'
-
-            pom {
-                name = 'Support Logging'
-                description = 'Structured support logging utilities for Java and Spring applications'
-                url = 'https://github.com/raulbolivarnavas/support-logging'
-                licenses {
-                    license {
-                        name = 'Apache License, Version 2.0'
-                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                        distribution = 'repo'
+                    licenses {
+                        license {
+                            name = 'Apache License, Version 2.0'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                            distribution = 'repo'
+                        }
                     }
-                }
 
-                developers {
-                    developer {
-                        id = 'raulbolivarnavas'
-                        name = 'Raul Bolivar'
-                        url = 'https://github.com/raulbolivarnavas'
+                    developers {
+                        developer {
+                            id = 'raulbolivarnavas'
+                            name = 'Raul Bolivar'
+                            url = 'https://github.com/raulbolivarnavas'
+                        }
                     }
-                }
 
-                scm {
-                    connection = 'scm:git:git://github.com/raulbolivarnavas/support-logging.git'
-                    developerConnection = 'scm:git:ssh://github.com/raulbolivarnavas/support-logging.git'
-                    url = 'https://github.com/raulbolivarnavas/support-logging'
+                    scm {
+                        connection = 'scm:git:git://github.com/raulbolivarnavas/java-webflux-support-logging.git'
+                        developerConnection = 'scm:git:ssh://github.com/raulbolivarnavas/java-webflux-support-logging.git'
+                        url = 'https://github.com/raulbolivarnavas/java-webflux-support-logging'
+                    }
                 }
             }
         }
-    }
 
-    repositories {
-        maven {
-            name = 'staging'
-            url = layout.buildDirectory.dir(
-                    'staging-deploy'
-            )
+        repositories {
+            maven {
+                name = 'staging'
+                url = rootProject.layout.buildDirectory.dir('staging-deploy')
+            }
         }
     }
 }
 
-def signingKey = findProperty('signingKey')
-def signingPassword = findProperty('signingPassword')
+tasks.register('jacocoReports') {
+    group = 'verification'
+    description = 'Generates JaCoCo HTML reports for all subprojects.'
 
-signing {
-    if (signingKey) {
-        useInMemoryPgpKeys(
-                signingKey,
-                signingPassword
-        )
-        sign publishing.publications.mavenJava
+    dependsOn subprojects.collect { project ->
+        project.tasks.named('jacocoTestReport')
     }
 }
 
 jreleaser {
-
     project {
         authors = ['Raul Bolivar']
         license = 'Apache-2.0'
 
         links {
-            homepage = 'https://github.com/raulbolivarnavas/support-logging'
+            homepage = 'https://github.com/raulbolivarnavas/java-webflux-support-logging'
         }
     }
 
@@ -156,11 +124,12 @@ jreleaser {
         github {
             enabled = true
             repoOwner = 'raulbolivarnavas'
-            name = 'support-logging'
+            name = 'java-webflux-support-logging'
             branch = 'main'
             overwrite = false
             skipTag = false
             skipRelease = false
+            immutableRelease = false
         }
     }
 
@@ -170,9 +139,8 @@ jreleaser {
                 sonatype {
                     active = 'ALWAYS'
                     url = 'https://central.sonatype.com/api/v1/publisher'
-
                     stagingRepository(
-                            layout.buildDirectory
+                            rootProject.layout.buildDirectory
                                     .dir('staging-deploy')
                                     .get()
                                     .asFile

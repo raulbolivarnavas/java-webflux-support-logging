@@ -1,0 +1,5 @@
+rootProject.name = 'support-logging'
+
+include 'support-logging-core'
+include 'support-logging-spring-boot3'
+include 'support-logging-spring-boot4'

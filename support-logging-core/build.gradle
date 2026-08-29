@@ -1,0 +1,8 @@
+dependencies {
+    api "org.slf4j:slf4j-api:${slf4jApi}"
+
+    testImplementation platform("org.junit:junit-bom:${junitBom}")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testImplementation "ch.qos.logback:logback-classic:1.5.18"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
